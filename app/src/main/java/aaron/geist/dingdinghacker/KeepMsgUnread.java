@@ -1,17 +1,19 @@
 package aaron.geist.dingdinghacker;
 
+import java.util.Map;
+
 import aaron.geist.util.Utils;
 import de.robv.android.xposed.IXposedHookLoadPackage;
-import de.robv.android.xposed.XC_MethodReplacement;
+import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 import static aaron.geist.dingdinghacker.Constants.DINGDING_PACKAGE_NAME;
-import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 
 /**
  * Keep message unread, even if you have read it.
  * <p>
- * Created by maojun on 2016/12/26.
+ * Created by Aaron on 2016/12/26.
  */
 
 public class KeepMsgUnread implements IXposedHookLoadPackage {
@@ -23,15 +25,22 @@ public class KeepMsgUnread implements IXposedHookLoadPackage {
         if (lpparam.packageName.equals(DINGDING_PACKAGE_NAME)) {
 
             // When message is read, rpc will be sent to server, notifying that it's read.
-            // So such rpc sending function is replaced here.
-            findAndHookMethod(CLASS_NAME_MESSAGE_READ_TASK, lpparam.classLoader, "b", new XC_MethodReplacement() {
+            // So message to be updated is cleaned here.
+            XposedHelpers.findAndHookMethod(CLASS_NAME_MESSAGE_READ_TASK, lpparam.classLoader, "b", new XC_MethodHook() {
                 @Override
-                protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
-                    Utils.log(">>> replacing rpc sending read status");
-                    return null;
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    if (PREFS.isEnableKeepUnread()) {
+                        Utils.log(">>> enable keep unread");
+                        // 'a' contains all messages to be set as read.
+                        Map innerMap = (Map) XposedHelpers.getObjectField(param.thisObject, "a");
+                        if (innerMap != null) {
+                            innerMap.clear();
+                        }
+                    } else {
+                        Utils.log(">>> disable keep unread");
+                    }
                 }
             });
-
         }
     }
 }

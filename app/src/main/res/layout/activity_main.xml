@@ -10,8 +10,19 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="aaron.geist.dingdinghacker.MainActivity">
 
-    <TextView
+    <Switch
+        android:text="保持未读状态"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!" />
+        android:layout_below="@+id/textView"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="35dp"
+        android:layout_marginTop="37dp"
+        android:id="@+id/unReadSwitch"
+        android:switchPadding="20dp"
+        android:switchTextAppearance="@style/TextAppearance.AppCompat"
+        android:textOn="@string/trigger_on"
+        android:textOff="@string/trigger_off"
+        android:checked="false"
+        android:textSize="18sp" />
 </RelativeLayout>
