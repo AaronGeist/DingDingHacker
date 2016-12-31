@@ -1,6 +1,5 @@
 package aaron.geist.dingdinghacker;
 
-import java.util.ArrayList;
 import java.util.Collection;
 
 import aaron.geist.util.Utils;
@@ -19,13 +18,29 @@ import static aaron.geist.dingdinghacker.Constants.DINGDING_PACKAGE_NAME;
 
 public class AntiMsgRecall implements IXposedHookLoadPackage {
 
+    /**
+     * message instance
+     */
     private static final String CLASS_NAME_MESSAGE_IMPL = "com.alibaba.wukong.im.message.MessageImpl";
+
+    /**
+     * MessageDs, database
+     */
     private static final String CLASS_NAME_MESSAGE_DB = "cuw";
+
+    /**
+     * MessageCache, changes will be applied on both local map cache and DB
+     */
+    private static final String CLASS_NAME_MESSAGE_CACHE = "cuu";
+
+    private static final String CLASS_NAME_CONVERSATION = "com.alibaba.wukong.im.conversation.ConversationImpl";
     private static final String RECALLED_MSG = "Msg has been recalled.";
+    private static final String NOTICE_SUFFIX = " [已撤回]";
     private static final int NUM_MESSAGE_TEXT_TYPE = 1;
 
     @Override
     public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+
         if (lpparam.packageName.equals(DINGDING_PACKAGE_NAME)) {
 
             Utils.log(">>> Find package " + DINGDING_PACKAGE_NAME);
@@ -34,8 +49,9 @@ public class AntiMsgRecall implements IXposedHookLoadPackage {
             XposedHelpers.findAndHookMethod(CLASS_NAME_MESSAGE_IMPL, lpparam.classLoader, "recallStatus", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(XC_MethodHook.MethodHookParam param) throws Throwable {
-                    // if msg is recalled and RECALLED msg is stored in local DB, then let it shown as recalled as usual
-                    if (RECALLED_MSG.equalsIgnoreCase(loadMsgText(param.thisObject))) {
+                    // if msg is already recalled and RECALLED msg is stored in local DB,
+                    // then let it shown as usual
+                    if (RECALLED_MSG.equalsIgnoreCase(getMsgText(param.thisObject))) {
                         return;
                     }
 
@@ -45,20 +61,40 @@ public class AntiMsgRecall implements IXposedHookLoadPackage {
                 }
             });
 
-            // stop replacing message content with default recalled string in database
-            XposedHelpers.findAndHookMethod(CLASS_NAME_MESSAGE_DB, lpparam.classLoader, "b", String.class, Collection.class, new XC_MethodHook() {
+            /**
+             * When message is recalled, it'll be replaced with default string "Msg has been recalled." in both DB and cache.
+             * Instead of replacing the original message content with default string, we load the original message text and
+             * append notifying text as suffix, so that user could know which message was to be recalled.
+             */
+            XposedHelpers.findAndHookMethod(CLASS_NAME_MESSAGE_CACHE, lpparam.classLoader, "a", String.class, Collection.class, boolean.class, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    Collection msgs = new ArrayList();
-                    for (Object o : (Collection) param.args[1]) {
-                        String msg = loadMsgText(o);
-                        if (!RECALLED_MSG.equalsIgnoreCase(msg)) {
-                            msgs.add(o);
+                    boolean replace = (boolean) param.args[2];
+                    if (!replace) {
+                        // if not message replacement, then safe
+                        return;
+                    }
+
+                    final Class<?> CLASS_MESSAGE_DB = XposedHelpers.findClass(CLASS_NAME_MESSAGE_DB, lpparam.classLoader);
+
+                    String cid = (String) param.args[0];
+
+                    for (Object msg : (Collection) param.args[1]) {
+                        if (RECALLED_MSG.equalsIgnoreCase(getMsgText(msg))) {
+                            long mid = XposedHelpers.getLongField(msg, "mMid");
+
+                            Object conversation = XposedHelpers.getObjectField(msg, "mConversation");
+
+                            // load original messageImpl from DB
+                            Object msgInDB = XposedHelpers.callStaticMethod(CLASS_MESSAGE_DB, "a", cid, mid, conversation);
+
+                            String originMsgText = getMsgText(msgInDB);
+                            Utils.log(">>> origin msg=" + originMsgText);
+
+                            // append info suffix
+                            setMsgText(msg, originMsgText + NOTICE_SUFFIX);
                         }
                     }
-                    param.args[1] = msgs;
-
-                    Utils.log(">>> removed all messages to be recalled");
                 }
             });
 
@@ -78,21 +114,44 @@ public class AntiMsgRecall implements IXposedHookLoadPackage {
      * @param msg message
      * @return message string, null if not text type
      */
-    private String loadMsgText(Object msg) {
+    private String getMsgText(Object msg) {
         try {
-            // msg.class = com.alibaba.wukong.im.MessageContent
+            // msg.class = com.alibaba.wukong.im.MessageImpl
             Object innerContent = XposedHelpers.getObjectField(msg, "mMessageContent");
             // indicate which type of content
             int type = (int) XposedHelpers.callMethod(innerContent, "type");
 
             if (type == NUM_MESSAGE_TEXT_TYPE) {
-                // ctx.class = com.alibaba.wukong.im.message.MessageContentImpl$TextContentImpl
+                // innerContent.class = com.alibaba.wukong.im.message.MessageContentImpl$TextContentImpl
                 return (String) XposedHelpers.callMethod(innerContent, "text");
             }
         } catch (Throwable t) {
         }
 
         return null;
+    }
+
+    /**
+     * Set text into messageImpl instance.
+     *
+     * @param msg     message
+     * @param newText text to be set
+     */
+    private void setMsgText(Object msg, String newText) {
+        try {
+            // msg.class = com.alibaba.wukong.im.MessageImpl
+            Object innerContent = XposedHelpers.getObjectField(msg, "mMessageContent");
+            // indicate which type of content
+            int type = (int) XposedHelpers.callMethod(innerContent, "type");
+
+            if (type == NUM_MESSAGE_TEXT_TYPE) {
+                // innerContent.class = com.alibaba.wukong.im.message.MessageContentImpl$TextContentImpl
+                XposedHelpers.callMethod(innerContent, "setText", newText);
+            } else {
+                Utils.log(">>> not correct type");
+            }
+        } catch (Throwable t) {
+        }
     }
 }
 
