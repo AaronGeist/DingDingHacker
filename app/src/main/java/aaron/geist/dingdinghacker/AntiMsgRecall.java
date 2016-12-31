@@ -49,6 +49,10 @@ public class AntiMsgRecall implements IXposedHookLoadPackage {
             XposedHelpers.findAndHookMethod(CLASS_NAME_MESSAGE_IMPL, lpparam.classLoader, "recallStatus", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(XC_MethodHook.MethodHookParam param) throws Throwable {
+                    if (!PREFS.isEnableAntiRecall()) {
+                        return;
+                    }
+
                     // if msg is already recalled and RECALLED msg is stored in local DB,
                     // then let it shown as usual
                     if (RECALLED_MSG.equalsIgnoreCase(getMsgText(param.thisObject))) {
@@ -69,6 +73,10 @@ public class AntiMsgRecall implements IXposedHookLoadPackage {
             XposedHelpers.findAndHookMethod(CLASS_NAME_MESSAGE_CACHE, lpparam.classLoader, "a", String.class, Collection.class, boolean.class, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    if (!PREFS.isEnableAntiRecall()) {
+                        return;
+                    }
+
                     boolean replace = (boolean) param.args[2];
                     if (!replace) {
                         // if not message replacement, then safe

@@ -14,7 +14,6 @@
         android:text="保持未读状态"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/textView"
         android:layout_alignParentStart="true"
         android:layout_marginStart="35dp"
         android:layout_marginTop="37dp"
@@ -25,4 +24,20 @@
         android:textOff="@string/trigger_off"
         android:checked="false"
         android:textSize="18sp" />
+
+    <Switch
+        android:text="防止消息撤回"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:id="@+id/antiRecall"
+        android:switchPadding="20dp"
+        android:switchTextAppearance="@style/TextAppearance.AppCompat"
+        android:textOn="@string/trigger_on"
+        android:textOff="@string/trigger_off"
+        android:checked="false"
+        android:textSize="18sp"
+        android:layout_below="@+id/unReadSwitch"
+        android:layout_alignStart="@+id/unReadSwitch" />
+
 </RelativeLayout>

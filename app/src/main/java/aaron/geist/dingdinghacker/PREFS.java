@@ -17,7 +17,12 @@ public enum PREFS {
 
     public static final String KEY_ENABLE_KEEP_UNREAD = "enable_keep_unread";
 
+    public static final String KEY_ENABLE_ANTI_RECALL = "enable_anti_recall";
+
+
     private static final boolean VALUE_DEFAULT_BOOLEAN = false;
+
+
 
     /**
      * Init sharedPref.
@@ -28,6 +33,14 @@ public enum PREFS {
     }
 
     public static boolean isEnableKeepUnread() {
+        return isBoolean(KEY_ENABLE_KEEP_UNREAD);
+    }
+
+    public static boolean isEnableAntiRecall() {
+        return isBoolean(KEY_ENABLE_ANTI_RECALL);
+    }
+
+    private static boolean isBoolean(String key) {
         if (null == preferences) {
             return VALUE_DEFAULT_BOOLEAN;
         }
@@ -35,6 +48,6 @@ public enum PREFS {
         if (preferences.hasFileChanged()) {
             preferences.reload();
         }
-        return preferences.getBoolean(KEY_ENABLE_KEEP_UNREAD, VALUE_DEFAULT_BOOLEAN);
+        return preferences.getBoolean(key, VALUE_DEFAULT_BOOLEAN);
     }
 }

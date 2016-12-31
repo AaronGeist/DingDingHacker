@@ -20,13 +20,21 @@ public class MainActivity extends AppCompatActivity {
 
 
         Switch unReadSwitch = (Switch) findViewById(R.id.unReadSwitch);
+        Switch antiRecall = (Switch) findViewById(R.id.antiRecall);
 
         unReadSwitch.setChecked(prefs.getBoolean(PREFS.KEY_ENABLE_KEEP_UNREAD, false));
-
         unReadSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
                 prefs.edit().putBoolean(PREFS.KEY_ENABLE_KEEP_UNREAD, isChecked).apply();
+            }
+        });
+
+        antiRecall.setChecked(prefs.getBoolean(PREFS.KEY_ENABLE_ANTI_RECALL, false));
+        antiRecall.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                prefs.edit().putBoolean(PREFS.KEY_ENABLE_ANTI_RECALL, isChecked).apply();
             }
         });
     }
